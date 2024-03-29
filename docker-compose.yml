@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  php:
+    build: ./php
+    image: custom-php-image
+    container_name: php
+    restart: always
+    depends_on:
+      - mariadb
+    ports:
+      - 9000:9000
+    volumes:
+      - ./php/php.ini:/usr/local/etc/php/php.ini
+      - ./php/www:/var/www/html
+
+  mariadb:
+    image: mariadb:${MARIADB_IMAGE_TAG}
+    container_name: mariadb
+    restart: always
+    environment:
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+    volumes:
+      - ./mariadb/my.cnf:/etc/mysql/my.cnf
+      - ./mariadb/backup-container:/backup
+      - ./mariadb/backupdb:/var/lib/mysql
+      - ./mariadb/initialdb:/docker-entrypoint-initdb.d
+
+  nginx:
+    image: nginx:${NGINX_IMAGE_TAG}
+    container_name: nginx
+    restart: always
+    environment:
+      - NGINX_HOST=${NGINX_HOST}
+      - NGINX_PORT=${NGINX_PORT}
+    ports:
+      - 80:80
+      - 443:443
+    links:
+      - php
+    volumes:
+      - ./php/www:/var/www/html
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/sites/:/etc/nginx/conf.d/
+
+  phpmyadmin:
+    image: phpmyadmin:${PHPMYADMIN_IMAGE_TAG}
+    container_name: phpmyadmin
+    restart: always
+    environment:
+      - PMA_HOST=${PMA_HOST}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      # - MAX_EXECUTION_TIME=5000
+      # - MEMORY_LIMIT=1000M
+      # - UPLOAD_LIMIT=750M
+
+    ports:
+      - 8080:80
+    volumes:
+      - ./phpmyadmin/config.inc.php:/etc/phpmyadmin/config.user.inc.php
